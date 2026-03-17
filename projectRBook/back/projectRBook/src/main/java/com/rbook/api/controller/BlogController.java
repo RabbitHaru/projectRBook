@@ -21,6 +21,11 @@ public class BlogController {
         return blogRepository.findAllByOrderByIdDesc();
     }
 
+    @GetMapping("/user/{username}")
+    public List<Blog> getMyBlogs(@PathVariable String username) {
+        return blogRepository.findAllByUsernameOrderByIdDesc(username);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Blog> getBlogById(@PathVariable Long id) {
         return blogRepository.findById(id)
@@ -44,6 +49,16 @@ public class BlogController {
                     blog.setBookAuthor(blogDetails.getBookAuthor());
                     blog.setBookPublisher(blogDetails.getBookPublisher());
                     blog.setBookRating(blogDetails.getBookRating());
+                    return ResponseEntity.ok(blogRepository.save(blog));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<Blog> likeBlog(@PathVariable Long id) {
+        return blogRepository.findById(id)
+                .map(blog -> {
+                    blog.setLikesCount(blog.getLikesCount() + 1);
                     return ResponseEntity.ok(blogRepository.save(blog));
                 })
                 .orElse(ResponseEntity.notFound().build());

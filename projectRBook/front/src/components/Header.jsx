@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, LogOut, User, LogIn, UserPlus } from 'lucide-react';
+import { Library, LogOut, User, LogIn, UserPlus } from 'lucide-react';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ const Header = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    import('react-hot-toast').then(({ toast }) => toast.success("로그아웃 되었습니다."));
     navigate('/login');
   };
 
@@ -23,9 +24,11 @@ const Header = () => {
       justifyContent: 'space-between',
       alignItems: 'center'
     }}>
-      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-        <BookOpen size={28} />
-        <span>BookBlog</span>
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-main)', textDecoration: 'none', letterSpacing: '-0.5px' }}>
+        <div style={{ background: 'var(--primary)', padding: '0.4rem', borderRadius: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '0.2rem' }}>
+          <Library size={22} color="white" />
+        </div>
+        <span><span style={{ color: 'var(--primary)' }}>R</span>Book</span>
       </Link>
 
       <nav style={{ display: 'flex', gap: '2rem' }}>
@@ -36,12 +39,12 @@ const Header = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {user ? (
           <>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              <User size={16} inline style={{ marginRight: '4px' }} />
-              {user.username}님
-            </span>
-            <button onClick={handleLogout} className="btn" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-              <LogOut size={18} />
+            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', color: 'var(--text-main)', textDecoration: 'none', fontWeight: '500' }}>
+              <User size={18} color="var(--primary)" />
+              {user.name || user.username}님
+            </Link>
+            <button onClick={handleLogout} className="btn" style={{ background: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', padding: '0.5rem 1rem' }}>
+              <LogOut size={16} />
               로그아웃
             </button>
           </>

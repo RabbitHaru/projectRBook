@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Book, Save, X, Star, Image as ImageIcon, Type, AlignLeft, User } from 'lucide-react';
+import { Book, Save, X, Star, Image as ImageIcon, Type, AlignLeft, User, Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const BlogWrite = () => {
     const navigate = useNavigate();
@@ -13,25 +14,62 @@ const BlogWrite = () => {
         bookTitle: '',
         bookAuthor: '',
         bookPublisher: '',
-        bookRating: '5',
-        img: '',
-        writer: user ? user.username : '익명'
+        bookRating: 5,
+        writer: user ? (user.name || user.username) : '익명',
+        username: user ? user.username : null
     });
+
+    const [imageFile, setImageFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setUploading(true);
+        const loadingToast = toast.loading("리뷰를 등록하는 중...");
+
         try {
-            await axios.post('http://localhost:8080/api/blogs', formData);
-            alert('리뷰가 성공적으로 등록되었습니다!');
+            let imageUrl = '';
+            
+            // 이미지가 있다면 먼저 업로드
+            if (imageFile) {
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', imageFile);
+                const uploadRes = await axios.post('http://localhost:8080/api/upload', uploadFormData);
+                imageUrl = "http://localhost:8080" + uploadRes.data;
+            }
+
+            const dataToSubmit = {
+                ...formData,
+                bookRating: parseInt(formData.bookRating),
+                img: imageUrl
+            };
+
+            await axios.post('http://localhost:8080/api/blogs', dataToSubmit);
+            toast.success('리뷰가 성공적으로 등록되었습니다!', { id: loadingToast });
             navigate('/blogs');
         } catch (err) {
             console.error("Blog post error:", err);
-            alert('리뷰 등록 중 오류가 발생했습니다.');
+            toast.error('리뷰 등록 중 오류가 발생했습니다.', { id: loadingToast });
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -47,7 +85,7 @@ const BlogWrite = () => {
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                     {/* 도서 정보 섹션 */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', padding: '1.5rem', background: 'rgba(0,0,0,0.02)', borderRadius: '1rem', border: '1px solid var(--glass-border)' }}>
                         <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>
                             📖 도서 정보
                         </div>
@@ -63,42 +101,67 @@ const BlogWrite = () => {
                                     name="bookRating"
                                     value={formData.bookRating}
                                     onChange={handleChange}
-                                    style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white', appearance: 'none' }}
+                                    style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', background: 'rgba(0,0,0,0.04)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'var(--text-main)', appearance: 'none' }}
                                 >
-                                    {[5, 4, 3, 2, 1].map(num => <option key={num} value={num} style={{ background: '#1a1a2e' }}>{num}점</option>)}
+                                    {[5, 4, 3, 2, 1].map(num => <option key={num} value={num} style={{ background: 'white', color: 'black' }}>{num}점</option>)}
                                 </select>
                             </div>
                         </div>
                     </div>
 
-                    {/* 리뷰 내용 섹션 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <FormInput label="리뷰 제목" name="title" icon={<Type size={18} />} value={formData.title} onChange={handleChange} placeholder="리뷰를 한 줄로 요약해주세요" required />
-
-                        <FormInput label="이미지 URL (선택)" name="img" icon={<ImageIcon size={18} />} value={formData.img} onChange={handleChange} placeholder="https://..." />
-
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600' }}>리뷰 내용</label>
-                            <div style={{ position: 'relative' }}>
-                                <AlignLeft style={{ position: 'absolute', left: '1rem', top: '1rem', color: 'var(--text-muted)' }} size={18} />
-                                <textarea
-                                    name="content"
-                                    value={formData.content}
-                                    onChange={handleChange}
-                                    placeholder="책을 읽고 느낀 점을 자유롭게 기록해보세요."
-                                    style={{ width: '100%', minHeight: '200px', padding: '1rem 1rem 1rem 3rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white', lineHeight: '1.6', resize: 'vertical' }}
-                                    required
-                                />
+                    {/* 이미지 업로드 섹션 */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '2rem', alignItems: 'start' }}>
+                        <div style={{ 
+                            width: '200px', 
+                            height: '280px', 
+                            background: 'rgba(0,0,0,0.03)', 
+                            border: '2px dashed var(--glass-border)', 
+                            borderRadius: '1rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            cursor: 'pointer'
+                        }} onClick={() => document.getElementById('fileInput').click()}>
+                            {previewUrl ? (
+                                <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <Upload size={32} style={{ marginBottom: '0.5rem' }} />
+                                    <div style={{ fontSize: '0.8rem' }}>책 표지 업로드</div>
+                                </div>
+                            )}
+                            <input type="file" id="fileInput" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <FormInput label="리뷰 제목" name="title" icon={<Type size={18} />} value={formData.title} onChange={handleChange} placeholder="리뷰를 한 줄로 요약해주세요" required />
+                            
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600' }}>리뷰 내용</label>
+                                <div style={{ position: 'relative' }}>
+                                    <AlignLeft style={{ position: 'absolute', left: '1rem', top: '1rem', color: 'var(--text-muted)' }} size={18} />
+                                    <textarea
+                                        name="content"
+                                        value={formData.content}
+                                        onChange={handleChange}
+                                        placeholder="책을 읽고 느낀 점을 자유롭게 기록해보세요."
+                                        style={{ width: '100%', minHeight: '180px', padding: '1rem 1rem 1rem 3rem', background: 'rgba(0,0,0,0.04)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'var(--text-main)', lineHeight: '1.6', resize: 'vertical' }}
+                                        required
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                        <button type="button" onClick={() => navigate('/blogs')} className="btn" style={{ flex: 1, justifyContent: 'center', background: 'rgba(255,255,255,0.05)' }}>
+                        <button type="button" onClick={() => navigate('/blogs')} className="btn" style={{ flex: 1, justifyContent: 'center', background: 'rgba(0,0,0,0.02)' }} disabled={uploading}>
                             <X size={20} /> 취소
                         </button>
-                        <button type="submit" className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
-                            <Save size={20} /> 리뷰 등록하기
+                        <button type="submit" className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }} disabled={uploading}>
+                            <Save size={20} /> {uploading ? '저장 중...' : '리뷰 등록하기'}
                         </button>
                     </div>
                 </form>
@@ -114,7 +177,7 @@ const FormInput = ({ label, icon, ...props }) => (
             <div style={{ position: 'absolute', left: '1rem', color: 'var(--text-muted)', display: 'flex' }}>{icon}</div>
             <input
                 {...props}
-                style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'white' }}
+                style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', background: 'rgba(0,0,0,0.04)', border: '1px solid var(--glass-border)', borderRadius: '0.5rem', color: 'var(--text-main)' }}
             />
         </div>
     </div>

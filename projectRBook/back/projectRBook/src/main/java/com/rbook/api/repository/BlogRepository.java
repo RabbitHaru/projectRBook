@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface BlogRepository extends JpaRepository<Blog, Long> {
     List<Blog> findAllByOrderByIdDesc();
+    List<Blog> findAllByUsernameOrderByIdDesc(String username);
 }

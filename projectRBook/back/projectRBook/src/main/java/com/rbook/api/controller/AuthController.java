@@ -16,12 +16,14 @@ import java.util.Map;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @PostMapping("/join")
     public ResponseEntity<?> join(@RequestBody User user) {
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username already exists");
         }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return ResponseEntity.ok(userRepository.save(user));
     }
 
@@ -31,7 +33,7 @@ public class AuthController {
         String password = loginData.get("password");
 
         return userRepository.findByUsername(username)
-                .filter(user -> user.getPassword().equals(password)) // 실제 서비스에서는 BCrypt 등 암호화 필수
+                .filter(user -> passwordEncoder.matches(password, user.getPassword()))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
